@@ -34,3 +34,7 @@ Below are the descriptions of each project and what I have done in each project.
 **Support Vector Machine Spam Classification Project:**
 - Implemented a SVM model to build a spam classifier
 - 99.83% accuracy on the training set, 98.60% accuracy on test set
+
+--
+
+## Udemy:
