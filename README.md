@@ -9,7 +9,7 @@ Below are the descriptions of each project and what I have done in each project.
 - Used a subset of the LendingClub dataset from Kaggle to build a Sequential Deep Learning Neural Network model that can predict whether or not a borrower will pay back their loan based on historical data on loans.
 - 0.89 F1 Score with an imbalanced dataset (80% paid off, 20% defaulted)
 ---------
-- used a Sequential Deep Learning Neural Network to predict housing prices in Kings County, USA based on other houses in the area from a Kaggle dataset.
+- Used a Sequential Deep Learning Neural Network to predict housing prices in Kings County, USA based on other houses in the area from a Kaggle dataset.
 - Explained Variance Score of 0.795
 
 **Decision Trees and Random Forest Project:**
