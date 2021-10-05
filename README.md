@@ -18,7 +18,7 @@ Below are the descriptions of each project and what I have done in each project.
 - Random Forest Model has a 0.85 F1 Score
 
 **Deep Learning:**
-- Used a Bank Authentication dataset from the UCI repository.
+- Used a Bank Authentication dataset from the UCI repository to determine whether or not a bank note is real.
 - Trained a DNNClassifier from Tensorflow with a 0.86 F1 Score
 - Compared with a trained Random Forest classifier that achieved a 0.99 F1 Score
 
