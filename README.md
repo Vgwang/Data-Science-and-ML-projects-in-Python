@@ -1,4 +1,4 @@
-# Data-Science-and-Machine-Learning-Projects PYTHON
+# Data-Science-and-Machine-Learning-Projects
 
 Below are the descriptions of each project and what I have done in each project.  Feel free to take a look around!
 
