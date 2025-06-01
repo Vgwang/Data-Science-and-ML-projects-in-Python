@@ -1,0 +1,113 @@
+import streamlit as st
+import pandas as pd
+import sqlite3
+import io
+from functools import reduce
+
+st.set_page_config(page_title="Investor Organizer", layout="wide")
+st.title("📊 Partner Information Organizer")
+
+# Upload section
+uploaded_files = st.file_uploader(
+    "Upload Partner Information Excel file(s):",
+    type=["xlsx"],
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    dfs = []
+
+    for file in uploaded_files:
+        try:
+            # Skip the first 4 rows to start from row 5
+            df = pd.read_excel(file, skiprows=5)
+            df.columns = df.columns.str.strip()
+
+            # Display detected column names
+            st.write(f"📂 Columns found in {file.name}:", df.columns.tolist())
+
+            # Required columns to build Investor Name
+            name_parts = [
+                "Entity or First Name", "MI", "Last Name",
+                "Suffix", "Name (Continued)"
+            ]
+
+            if all(col in df.columns for col in name_parts):
+                # Build the clean 'Investor Name'
+                df['Investor Name'] = (
+                    df['Entity or First Name'].fillna('') + ' ' +
+                    df['MI'].fillna('') + ' ' +
+                    df['Last Name'].fillna('') + ' ' +
+                    df['Suffix'].fillna('') + ' ' +
+                    df['Name (Continued)'].fillna('')
+                ).str.replace(r'\s+', ' ', regex=True).str.strip()
+
+                dfs.append(df)
+            else:
+                st.warning(f"⚠️ File '{file.name}' is missing one or more required Name columns. Skipping.")
+        except Exception as e:
+            st.error(f"❌ Error reading '{file.name}': {e}")
+
+    if dfs:
+        combined_df = pd.concat(dfs, ignore_index=True)
+
+        # Let user select which columns to organize under each Investor
+        ignore_cols = name_parts + ['Investor Name']
+        other_columns = [col for col in combined_df.columns if col not in ignore_cols]
+        selected_columns = st.multiselect("Select columns to associate with each investor:", other_columns, default=other_columns)
+
+        combine_toggle = st.checkbox("🔗 Combine selected columns into one merged list per investor", value=True)
+
+        if selected_columns:
+            conn = sqlite3.connect(":memory:")
+
+            if combine_toggle:
+                # Melt into long format
+                melted_df = combined_df.melt(
+                    id_vars="Investor Name",
+                    value_vars=selected_columns,
+                    var_name="Source Column",
+                    value_name="Value"
+                ).dropna(subset=["Value"])
+
+                melted_df.to_sql("combined_data", conn, index=False, if_exists="replace")
+
+                query = """
+                SELECT [Investor Name], GROUP_CONCAT(DISTINCT Value) AS All_Values
+                FROM combined_data
+                GROUP BY [Investor Name]
+                ORDER BY [Investor Name]
+                """
+
+                result_df = pd.read_sql_query(query, conn)
+                result_df['All_Values'] = result_df['All_Values'].str.replace(",", ", ")
+            else:
+                # Separate mode: group values per column
+                working_df = combined_df[["Investor Name"] + selected_columns]
+                working_df.to_sql("data", conn, index=False, if_exists="replace")
+
+                result_dfs = []
+                for col in selected_columns:
+                    q = f"""
+                    SELECT [Investor Name], GROUP_CONCAT(DISTINCT [{col}]) AS [{col} Values]
+                    FROM data
+                    GROUP BY [Investor Name]
+                    """
+                    df_result = pd.read_sql_query(q, conn)
+                    for c in df_result.columns:
+                        if c != 'Investor Name':
+                            df_result[c] = df_result[c].fillna('').apply(lambda x: ', '.join(x.split(',')) if isinstance(x, str) else x)
+                    result_dfs.append(df_result)
+
+                result_df = reduce(lambda left, right: pd.merge(left, right, on="Investor Name", how="outer"), result_dfs)
+
+            st.subheader("📋 Organized Investor Data")
+            st.dataframe(result_df, use_container_width=True)
+
+            # Download Excel
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                result_df.to_excel(writer, index=False, sheet_name='Results')
+            st.download_button("⬇️ Download Results as Excel", data=buffer.getvalue(), file_name="organized_investors.xlsx")
+        else:
+            st.info("ℹ️ Please select at least one column to associate with each investor.")
